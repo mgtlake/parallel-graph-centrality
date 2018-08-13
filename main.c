@@ -39,6 +39,15 @@ void print_graph(Graph* graph) {
     }
 }
 
+void print_int_matrix(int** matrix, int rows, int cols) {
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            printf("%i\t", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
+
 /* Parse and process a line read from the input file.
  * Parameters:
  *          lineBuffer - the line in question
@@ -118,47 +127,42 @@ Graph* read_file(char* filename) {
     return graph;
 }
 
-/* Find the lengh of the shortest path between two nodes connected by 
- *  weighted edges.
- *  Uses Dijkstra's Algorithm for now.
+/* Find the centre of the graph
  * Parameters:
- *          start - the index of the first node
- *          end - the index of the second node
- *          graph - the graph being navigated
- * Return
- *          The total distance (sum of edge weights) of the shortest path
- *          between the two nodes.
+ *          graph - the graph in question
+ * Return:
+ *          The id of the centre node.
  */
-int distance(int start, int end, Graph* graph) {
-    int* dist = malloc(sizeof(int) * graph->nodeCount);
-    for (int i = 0; i < graph->nodeCount; i++) dist[i] = INT_MAX;
-    dist[start] = 0; 
-
-    PQ* pq = initPQ(dist, graph->nodeCount);
-    while (pq->len > 0) {
-        int node = pop(pq);
-        for (int i = 0; i < graph->nodeCount; i++) {
-            if (graph->connections[node][i] )
+int closeness_centre(Graph* graph) {
+    int** dist = malloc(graph->nodeCount * sizeof(int*));
+    for (int i = 0; i < graph->nodeCount; i++) {
+        dist[i] = malloc(graph->nodeCount * sizeof(int));
+        for (int j = 0; j < graph->nodeCount; j++) {
+            dist[i][j] = graph->connections[i][j];
         }
     }
-}
-
-/* Find the total distance (shortest path) from a given node to every other 
- *  connected node.
- * Parameters:
- *          node - the node to start from
- *          graph - the graph being navigated
- * Return
- *          The sum of the shortest paths to each connected node from the
- *          given node. 
- */
-int total_distance(int node, Graph* graph) {
-    int sum = 0;
-    for (int i = 0; i < graph->nodeCount; i++) {
-        if (i == node) continue;
-        sum += distance(node, i, graph);
+    for (int k = 0; k < graph->nodeCount; k++) {
+        for (int i = 0; i < graph->nodeCount; i++) {
+            for (int j = 0; j < graph->nodeCount; j++) {
+                if (dist[i][j] > dist[i][k] + dist[k][j])
+                    dist[i][j] = dist[i][k] + dist[k][j];
+            }
+        }
     }
-    return sum;
+    print_int_matrix(dist, graph->nodeCount, graph->nodeCount);
+    int centre = -1;
+    int minWeight = INT_MAX;
+    for (int i = 0; i < graph->nodeCount; i++) {
+        int sum = 0;
+        for (int j = 0; j < graph->nodeCount; j++) {
+            sum += dist[i][j];
+        } 
+        if (sum < minWeight) {
+            minWeight = sum;
+            centre = i;
+        }
+    }
+    return centre; 
 }
 
 int main(int argc, char** argv) {
@@ -172,6 +176,12 @@ int main(int argc, char** argv) {
     // Duplication of work - need to eliminate redundant cals - e.g. both ways
     // Try Dijkstra first to get a sense of worst-case
     // Then Floyd-Warshall
+    //
+    int centreId = closeness_centre(graph);
+    printf("centre: %s @ %i\n", graph->nodeLabels[centreId], centreId);
+
+    print_int_matrix(graph->connections, graph->nodeCount, graph->nodeCount);
+
     return 0;
 }
 
