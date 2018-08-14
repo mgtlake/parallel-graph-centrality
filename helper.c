@@ -8,7 +8,7 @@
  */
 void print_labels(Graph* graph) {
     for (int i = 0; i < graph->nodeCount; i++) {
-        printf("%i : %s\n", i, graph->nodeLabels[i]);
+        printf("%i : %s ", i, graph->nodeLabels[i]);
     }
     printf("---\n");
 }
@@ -38,7 +38,7 @@ void print_graph(Graph* graph) {
 void print_int_matrix(int** matrix, int rows, int cols) {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
-            printf("%i\t", matrix[i][j]);
+            printf("%i ", matrix[i][j]);
         }
         printf("\n");
     }
@@ -51,6 +51,7 @@ void print_int_matrix(int** matrix, int rows, int cols) {
  */
 void print_centres(ListNode* head, Graph* graph) {
     ListNode* node = head;
+    printf("Number of centres : %i\n", head->length);
     while (node != NULL) {
         printf("centre : %s @ %i\n", graph->nodeLabels[node->value], node->value);
 
@@ -84,32 +85,5 @@ int max_val(int* arr, int size) {
         if (arr[i] > champ) champ = arr[i];
     }
     return champ;
-}
-
-/* Get the indices of all elements in an array with the largest value.
- * Parameters:
- *          arr - the array being examined
- *          size - the size of the array
- * Return:
- *          Linked list of indices sharing max value. 
- *          If unique max value, still return a list of length 1.
- */
-ListNode* max_ids(int* arr, int size) {
-    int champ = 0;
-    ListNode* head = malloc(sizeof(ListNode));
-    // Go backwards so that list is in appearance order
-    for (int i = size - 1; i >= 0; i--) {
-        if (arr[i] > champ) {
-            champ = arr[i];
-            head->value = i;
-            if (head->next != NULL) free_list(head->next);
-        } else if (arr[i] == champ) {
-            ListNode* next = malloc(sizeof(ListNode));
-            next->value = i;
-            next->next = head;
-            head = next;
-        }
-    }
-    return head;
 }
 

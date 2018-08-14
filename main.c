@@ -3,86 +3,8 @@
 #include <stdlib.h>
 #include <limits.h>
 #include "helper.h"
+#include "io.h"
 
-
-/* Parse and process a line read from the input file.
- * Parameters:
- *          lineBuffer - the line in question
- *          line - the line number, 1-indexed
- *          bufferPos - the length of the line
- *          graph - the graph being read in
- */
-void process_line(char* lineBuffer, int line, int length, Graph* graph) {
-    if (line == 1) {
-        graph->nodeCount = atoi(lineBuffer);
-        graph->nodeLabels = malloc(graph->nodeCount * sizeof(char*));
-        // TODO we can cut this in half
-        graph->connections = malloc(graph->nodeCount * sizeof(int*));
-        for (int i = 0; i < graph->nodeCount; i++) {
-            graph->connections[i] = malloc(graph->nodeCount * sizeof(int));
-        }
-
-    } else if (line == 2) {
-        graph->edgeCount = atoi(lineBuffer);
-    } else if (line <= 2 + graph->nodeCount) {
-        int node_id = line - 2 - 1;
-        graph->nodeLabels[node_id] = malloc(sizeof(char) * length + 1);
-        strcpy(graph->nodeLabels[node_id], lineBuffer);
-
-    } else {
-        int from = atoi(strtok(lineBuffer, " "));
-        int to = atoi(strtok(NULL, " "));
-        int weight = atoi(strtok(NULL, " "));
-        graph->connections[from][to] = weight;
-        graph->connections[to][from] = weight;
-    }
-}
-
-/* Read an input file describing a graph.
- * Parameters:
- *          filename - the path and name of the file
- * Return:
- *          A fully constructed graph.
- */
-Graph* read_file(char* filename) {
-    FILE* file = fopen(filename, "r");
-    if (file == NULL) {
-        printf("File %s could not be opened.\n", filename);
-        exit(1);
-    }
-
-    Graph* graph = malloc(sizeof(Graph));
-
-    int bufferSize = sizeof(char) * 80;
-    char* lineBuffer = malloc(sizeof(char) * bufferSize);
-    int bufferPos = 0;
-    char c = 0;
-    int line = 0;
-
-    while ((c = fgetc(file)) != EOF) {
-        if (c == '\n') {
-            line++;
-
-            process_line(lineBuffer, line, bufferPos, graph);
-
-            bufferPos = 0;
-            bufferSize = sizeof(char) * 80;
-            memset(&lineBuffer[0], 0, bufferSize);
-        } else {
-            lineBuffer[bufferPos] = c;
-            bufferPos++;
-            if (bufferPos == bufferSize) {
-                bufferSize *= 2;
-                lineBuffer = realloc(lineBuffer, sizeof(char) * bufferSize);
-            }
-        }
-    }
-
-    free(lineBuffer);
-    fclose(file);
-
-    return graph;
-}
 
 /* Populate matrix of shortest paths between all pairs of nodes.
  * Parameters:
@@ -96,11 +18,7 @@ int** all_pair_shortest_path(Graph* graph) {
     for (int i = 0; i < graph->nodeCount; i++) {
         dist[i] = malloc(graph->nodeCount * sizeof(int));
         for (int j = 0; j < graph->nodeCount; j++) {
-            if (graph->connections[i][j] > 0 || i == j) {
-                dist[i][j] = graph->connections[i][j];
-            } else {
-                dist[i][j] = INT_MAX;
-            }
+            dist[i][j] = graph->connections[i][j];
         }
     }
     for (int k = 0; k < graph->nodeCount; k++) {
@@ -113,7 +31,7 @@ int** all_pair_shortest_path(Graph* graph) {
             }
         }
     }
-    //print_int_matrix(dist, graph->nodeCount, graph->nodeCount);
+    print_int_matrix(dist, graph->nodeCount, graph->nodeCount);
     return dist;
 }
 
@@ -131,7 +49,8 @@ ListNode* min_total_centres(Graph* graph) {
     int champ = INT_MAX;
     ListNode* centres = malloc(sizeof(ListNode));
     centres->next = NULL;
-    for (int i = 0; i < graph->nodeCount; i++) {
+    // Iterate backwards so that list is in appearance order
+    for (int i = graph->nodeCount - 1; i >= 0; i--) {
         int sum = 0;
         for (int j = 0; j < graph->nodeCount; j++) {
             sum += dist[i][j];
@@ -140,11 +59,16 @@ ListNode* min_total_centres(Graph* graph) {
         if (sum < champ) {
             champ = sum;
             centres->value = i;
-            if (centres->next != NULL) free_list(centres->next);
+            centres->length = 1;
+            if (centres->next != NULL) {
+                free_list(centres->next);
+                centres->next = NULL;
+            }
         } else if (sum == champ) {
             ListNode* next = malloc(sizeof(ListNode));
             next->value = i;
             next->next = centres;
+            next->length = centres->length + 1;
             centres = next;
         }
     }
@@ -166,17 +90,23 @@ ListNode* min_max_centres(Graph* graph) {
     int champ = INT_MAX;
     ListNode* centres = malloc(sizeof(ListNode));
     centres->next = NULL;
-    for (int i = 0; i < graph->nodeCount; i++) {
+    // Iterate backwards so that list is in appearance order
+    for (int i = graph->nodeCount - 1; i >= 0; i--) {
         int maxDistance = max_val(dist[i], graph->nodeCount);
         printf("%i: %i\n", i, maxDistance);
         if (maxDistance < champ) {
             champ = maxDistance;
             centres->value = i;
-            if (centres->next != NULL) free_list(centres->next);
+            centres->length = 1;
+            if (centres->next != NULL) {
+                free_list(centres->next);
+                centres->next = NULL;
+            }
         } else if (maxDistance == champ) {
             ListNode* next = malloc(sizeof(ListNode));
             next->value = i;
             next->next = centres;
+            next->length = centres->length + 1;
             centres = next;
         }
     }
@@ -196,8 +126,19 @@ int main(int argc, char** argv) {
     // Try Dijkstra first to get a sense of worst-case
     // Then Floyd-Warshall
     //
-    print_centres(min_total_centres(graph), graph);
-    print_centres(min_max_centres(graph), graph);
+    
+    ListNode* minTotalCentres = min_total_centres(graph);
+    print_centres(minTotalCentres, graph);
+    char* minTotalFilename = malloc((strlen(argv[1]) + 20) * sizeof(char));
+    sprintf(minTotalFilename, "%s-min_total", argv[1]);
+    write_file(minTotalFilename, minTotalCentres, graph);
+    //print_centres(min_max_centres(graph), graph);
+    
+    ListNode* minMaxCentres = min_max_centres(graph);
+    print_centres(minMaxCentres, graph);
+    char* minMaxFilename = malloc((strlen(argv[1]) + 20) * sizeof(char));
+    sprintf(minMaxFilename, "%s-min_max", argv[1]);
+    write_file(minMaxFilename, minMaxCentres, graph);
 
     //print_int_matrix(graph->connections, graph->nodeCount, graph->nodeCount);
 

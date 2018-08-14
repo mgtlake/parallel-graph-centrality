@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 /* Store a graph with weighted edges and labelled nodes.
 */
 typedef struct {
@@ -14,6 +12,7 @@ typedef struct {
 typedef struct listNode {
     int value;
     struct listNode* next;
+    int length;
 } ListNode;
 
 /* Print node labels for a graph.

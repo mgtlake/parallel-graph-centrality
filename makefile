@@ -3,7 +3,7 @@ CC = gcc
 CFLAGS = -Wall -std=gnu99
 DEBUG = -g
 OPT = -O3
-TARGETS = helper.o ass1
+TARGETS = helper.o io.o ass1
 
 # Mark the default target to run (otherwise make will select the first target in the file)
 .DEFAULT: all clean
@@ -20,8 +20,11 @@ debug: clean $(TARGETS)
 helper.o: helper.c helper.h
 	$(CC) $(CFLAGS) -c helper.c -o helper.o 
 
-ass1: ass1.c helper.o
-	$(CC) $(CFLAGS) helper.o ass1.c -o ass1
+io.o: io.c io.h
+	$(CC) $(CFLAGS) -c io.c -o io.o 
+
+ass1: ass1.c helper.o io.o
+	$(CC) $(CFLAGS) helper.o io.o ass1.c -o ass1
 
 # Clean up our directory - remove objects and binaries
 clean:
