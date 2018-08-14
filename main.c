@@ -31,7 +31,6 @@ int** all_pair_shortest_path(Graph* graph) {
             }
         }
     }
-    print_int_matrix(dist, graph->nodeCount, graph->nodeCount);
     return dist;
 }
 
@@ -55,7 +54,6 @@ ListNode* min_total_centres(Graph* graph) {
         for (int j = 0; j < graph->nodeCount; j++) {
             sum += dist[i][j];
         } 
-        printf("%i: %i\n", i, sum);
         if (sum < champ) {
             champ = sum;
             centres->value = i;
@@ -72,7 +70,6 @@ ListNode* min_total_centres(Graph* graph) {
             centres = next;
         }
     }
-    printf("total distance : %i\n", champ);
     return centres; 
 }
 
@@ -93,7 +90,6 @@ ListNode* min_max_centres(Graph* graph) {
     // Iterate backwards so that list is in appearance order
     for (int i = graph->nodeCount - 1; i >= 0; i--) {
         int maxDistance = max_val(dist[i], graph->nodeCount);
-        printf("%i: %i\n", i, maxDistance);
         if (maxDistance < champ) {
             champ = maxDistance;
             centres->value = i;
@@ -110,37 +106,21 @@ ListNode* min_max_centres(Graph* graph) {
             centres = next;
         }
     }
-    printf("min max distance : %i\n", champ);
     return centres; 
 }
 
 int main(int argc, char** argv) {
     Graph* graph = read_file(argv[1]);
-    //print_labels(graph);
-    //print_graph(graph);
-
-    // For all nodes
-    // - Sum shortest path to each other node
-    // Choose node with shortest such sum
-    // Duplication of work - need to eliminate redundant cals - e.g. both ways
-    // Try Dijkstra first to get a sense of worst-case
-    // Then Floyd-Warshall
-    //
     
     ListNode* minTotalCentres = min_total_centres(graph);
-    print_centres(minTotalCentres, graph);
     char* minTotalFilename = malloc((strlen(argv[1]) + 20) * sizeof(char));
     sprintf(minTotalFilename, "%s-min_total", argv[1]);
     write_file(minTotalFilename, minTotalCentres, graph);
-    //print_centres(min_max_centres(graph), graph);
     
     ListNode* minMaxCentres = min_max_centres(graph);
-    print_centres(minMaxCentres, graph);
     char* minMaxFilename = malloc((strlen(argv[1]) + 20) * sizeof(char));
     sprintf(minMaxFilename, "%s-min_max", argv[1]);
     write_file(minMaxFilename, minMaxCentres, graph);
-
-    //print_int_matrix(graph->connections, graph->nodeCount, graph->nodeCount);
 
     return 0;
 }
