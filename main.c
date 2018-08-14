@@ -2,51 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
-#include "priority_queue.h"
+#include "helper.h"
 
-/* Store a graph with weighted edges and labelled nodes.
-*/
-typedef struct {
-    int nodeCount;
-    int edgeCount;
-    char** nodeLabels;
-    int** connections;
-} Graph;
-
-/* Print node labels for a graph.
- * Parameters: 
- *          graph - the graph in question
- */
-void print_labels(Graph* graph) {
-    for (int i = 0; i < graph->nodeCount; i++) {
-        printf("%i : %s\n", i, graph->nodeLabels[i]);
-    }
-    printf("---\n");
-}
-
-/* Print a graph.
- * Parameters:
- *          graph - the graph in question
- */
-void print_graph(Graph* graph) {
-    for (int i = 0; i < graph->nodeCount; i++) {
-        for (int j = 0; j < graph->nodeCount; j++) {
-            if (graph->connections[i][j] != 0) {
-                printf("%s <---> %s weight %i\n", graph->nodeLabels[i], 
-                        graph->nodeLabels[j], graph->connections[i][j]);
-            }
-        } 
-    }
-}
-
-void print_int_matrix(int** matrix, int rows, int cols) {
-    for (int i = 0; i < rows; i++) {
-        for (int j = 0; j < cols; j++) {
-            printf("%i\t", matrix[i][j]);
-        }
-        printf("\n");
-    }
-}
 
 /* Parse and process a line read from the input file.
  * Parameters:
@@ -127,48 +84,110 @@ Graph* read_file(char* filename) {
     return graph;
 }
 
-/* Find the centre of the graph
+/* Populate matrix of shortest paths between all pairs of nodes.
  * Parameters:
  *          graph - the graph in question
  * Return:
- *          The id of the centre node.
+ *          A matrix containing the length of the shortest paths
+ *          between all nodes.
  */
-int closeness_centre(Graph* graph) {
+int** all_pair_shortest_path(Graph* graph) {
     int** dist = malloc(graph->nodeCount * sizeof(int*));
     for (int i = 0; i < graph->nodeCount; i++) {
         dist[i] = malloc(graph->nodeCount * sizeof(int));
         for (int j = 0; j < graph->nodeCount; j++) {
-            dist[i][j] = graph->connections[i][j];
+            if (graph->connections[i][j] > 0 || i == j) {
+                dist[i][j] = graph->connections[i][j];
+            } else {
+                dist[i][j] = INT_MAX;
+            }
         }
     }
     for (int k = 0; k < graph->nodeCount; k++) {
         for (int i = 0; i < graph->nodeCount; i++) {
             for (int j = 0; j < graph->nodeCount; j++) {
-                if (dist[i][j] > dist[i][k] + dist[k][j])
+                if (dist[i][j] > dist[i][k] + dist[k][j] 
+                        && dist[i][k] != INT_MAX && dist[k][j] != INT_MAX) {
                     dist[i][j] = dist[i][k] + dist[k][j];
+                }
             }
         }
     }
-    print_int_matrix(dist, graph->nodeCount, graph->nodeCount);
-    int centre = -1;
-    int minWeight = INT_MAX;
+    //print_int_matrix(dist, graph->nodeCount, graph->nodeCount);
+    return dist;
+}
+
+/* Find the centre of the graph defined by closeness.
+ *  That is, find the node(s) such that the sum of shortest paths to every other
+ *  node is minimised.
+ * Parameters:
+ *          graph - the graph in question
+ * Return:
+ *          The id of the centre node.
+ */
+ListNode* min_total_centres(Graph* graph) {
+    int** dist = all_pair_shortest_path(graph);
+
+    int champ = INT_MAX;
+    ListNode* centres = malloc(sizeof(ListNode));
+    centres->next = NULL;
     for (int i = 0; i < graph->nodeCount; i++) {
         int sum = 0;
         for (int j = 0; j < graph->nodeCount; j++) {
             sum += dist[i][j];
         } 
-        if (sum < minWeight) {
-            minWeight = sum;
-            centre = i;
+        printf("%i: %i\n", i, sum);
+        if (sum < champ) {
+            champ = sum;
+            centres->value = i;
+            if (centres->next != NULL) free_list(centres->next);
+        } else if (sum == champ) {
+            ListNode* next = malloc(sizeof(ListNode));
+            next->value = i;
+            next->next = centres;
+            centres = next;
         }
     }
-    return centre; 
+    printf("total distance : %i\n", champ);
+    return centres; 
+}
+
+/* Find the centre of the graph defined by minimum maximum distance.
+ *  That is, find the node(s) such that the longest distance to any other node 
+ *  (along the shortest path) is minimised.
+ * Parameters:
+ *          graph - the graph in question
+ * Return:
+ *          The id of the centre node.
+ */
+ListNode* min_max_centres(Graph* graph) {
+    int** dist = all_pair_shortest_path(graph);
+
+    int champ = INT_MAX;
+    ListNode* centres = malloc(sizeof(ListNode));
+    centres->next = NULL;
+    for (int i = 0; i < graph->nodeCount; i++) {
+        int maxDistance = max_val(dist[i], graph->nodeCount);
+        printf("%i: %i\n", i, maxDistance);
+        if (maxDistance < champ) {
+            champ = maxDistance;
+            centres->value = i;
+            if (centres->next != NULL) free_list(centres->next);
+        } else if (maxDistance == champ) {
+            ListNode* next = malloc(sizeof(ListNode));
+            next->value = i;
+            next->next = centres;
+            centres = next;
+        }
+    }
+    printf("min max distance : %i\n", champ);
+    return centres; 
 }
 
 int main(int argc, char** argv) {
     Graph* graph = read_file(argv[1]);
-    print_labels(graph);
-    print_graph(graph);
+    //print_labels(graph);
+    //print_graph(graph);
 
     // For all nodes
     // - Sum shortest path to each other node
@@ -177,10 +196,10 @@ int main(int argc, char** argv) {
     // Try Dijkstra first to get a sense of worst-case
     // Then Floyd-Warshall
     //
-    int centreId = closeness_centre(graph);
-    printf("centre: %s @ %i\n", graph->nodeLabels[centreId], centreId);
+    print_centres(min_total_centres(graph), graph);
+    print_centres(min_max_centres(graph), graph);
 
-    print_int_matrix(graph->connections, graph->nodeCount, graph->nodeCount);
+    //print_int_matrix(graph->connections, graph->nodeCount, graph->nodeCount);
 
     return 0;
 }
