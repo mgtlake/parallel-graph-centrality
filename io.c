@@ -1,3 +1,8 @@
+/* =============================================================================
+ * io.c         Set of functions for reading from and writing to files, as well 
+ *              as initialising the graph
+ * =============================================================================
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -5,7 +10,7 @@
 #include "helper.h"
 #include "io.h"
 
-/* Read an input file describing a graph.
+/* Read an input file describing a graph and construct that graph.
  * Parameters:
  *          filename - the path and name of the file
  * Return:
@@ -32,12 +37,14 @@ Graph* read_file(char* filename) {
 
             process_line(lineBuffer, line, bufferPos, graph);
 
+            // Reset buffer
             bufferPos = 0;
             bufferSize = sizeof(char) * 80;
             memset(&lineBuffer[0], 0, bufferSize);
         } else {
             lineBuffer[bufferPos] = c;
             bufferPos++;
+            // Increase buffer size
             if (bufferPos == bufferSize) {
                 bufferSize *= 2;
                 lineBuffer = realloc(lineBuffer, sizeof(char) * bufferSize);
@@ -62,7 +69,7 @@ void write_file(char* filename, ListNode* head, Graph* graph) {
     fprintf(file, "%i\n", head->length);
     ListNode* node = head;
     while (node != NULL) {
-        fprintf(file, "%s %i\n", graph->nodeLabels[node->value], node->value);
+        fprintf(file, "%i %s\n", node->value, graph->nodeLabels[node->value]);
         node = node->next;
     }
     fclose(file);
@@ -76,10 +83,11 @@ void write_file(char* filename, ListNode* head, Graph* graph) {
  *          graph - the graph being read in
  */
 void process_line(char* lineBuffer, int line, int length, Graph* graph) {
-    if (line == 1) {
+    if (line == 1) { // Node count line
         graph->nodeCount = atoi(lineBuffer);
         graph->nodeLabels = malloc(graph->nodeCount * sizeof(char*));
-        // TODO we can cut this in half
+        // Use full matrix instead of half for convenience - RAM will not be the
+        // bottleneck
         graph->connections = malloc(graph->nodeCount * sizeof(int*));
         for (int i = 0; i < graph->nodeCount; i++) {
             graph->connections[i] = malloc(graph->nodeCount * sizeof(int));
@@ -94,16 +102,20 @@ void process_line(char* lineBuffer, int line, int length, Graph* graph) {
             }
         }
 
-    } else if (line == 2) {
+    } else if (line == 2) { // Edge count line
         graph->edgeCount = atoi(lineBuffer);
-    } else if (line <= 2 + graph->nodeCount) {
+    } else if (line <= 2 + graph->nodeCount) { // Node label line
         int node_id = line - 2 - 1;
         graph->nodeLabels[node_id] = malloc(sizeof(char) * length + 1);
         strcpy(graph->nodeLabels[node_id], lineBuffer);
-    } else {
+    } else { // Edge line
         int from = atoi(strtok(lineBuffer, " "));
         int to = atoi(strtok(NULL, " "));
         int weight = atoi(strtok(NULL, " "));
+        // Always 0 distance from node to itself
+        if (from == to) return;
+        // Store two-way connection for greater convenience at expense of 
+        // approx doubling space required
         graph->connections[from][to] = weight;
         graph->connections[to][from] = weight;
     }

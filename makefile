@@ -1,8 +1,7 @@
 
 CC = gcc
-CFLAGS = -Wall -std=gnu99
+CFLAGS = -Wall -std=gnu99 -O3 -pg
 DEBUG = -g
-OPT = -O3
 TARGETS = helper.o io.o ass1
 
 # Mark the default target to run (otherwise make will select the first target in the file)
@@ -14,7 +13,6 @@ all: $(TARGETS)
 
 # A debug target to update flags before cleaning and compiling all targets
 debug: CFLAGS += $(DEBUG)
-optimise: CFLAGS += $(OPT)
 debug: clean $(TARGETS)
 
 helper.o: helper.c helper.h

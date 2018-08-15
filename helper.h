@@ -1,3 +1,9 @@
+/* =============================================================================
+ * helper.h     Set of helper functions, mostly printing and 
+ *              array and list operations, as well as core structs
+ * =============================================================================
+ */
+
 /* Store a graph with weighted edges and labelled nodes.
 */
 typedef struct {
@@ -34,7 +40,7 @@ void print_graph(Graph* graph);
  *          rows - the number of rows
  *          cols - the number of columns
  */
-void print_int_matrix(int** matrix, int rows, int cols);
+void print_matrix(int** matrix, int rows, int cols);
 
 /* Print a list of centres.
  * Parameters:

@@ -1,3 +1,8 @@
+/* =============================================================================
+ * helper.c     Set of helper functions, mostly printing and 
+ *              array and list operations
+ * =============================================================================
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include "helper.h"
@@ -35,10 +40,10 @@ void print_graph(Graph* graph) {
  *          rows - the number of rows
  *          cols - the number of columns
  */
-void print_int_matrix(int** matrix, int rows, int cols) {
+void print_matrix(int** matrix, int rows, int cols) {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
-            printf("%i ", matrix[i][j]);
+            printf("%i\t", matrix[i][j]);
         }
         printf("\n");
     }
@@ -53,7 +58,8 @@ void print_centres(ListNode* head, Graph* graph) {
     ListNode* node = head;
     printf("Number of centres : %i\n", head->length);
     while (node != NULL) {
-        printf("centre : %s @ %i\n", graph->nodeLabels[node->value], node->value);
+        int centreID = node->value;
+        printf("centre : %s @ %i\n", graph->nodeLabels[centreID], centreID);
 
         node = node->next;
     }

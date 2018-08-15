@@ -1,4 +1,10 @@
-/* Read an input file describing a graph.
+/* =============================================================================
+ * io.c         Set of functions for reading from and writing to files, as well 
+ *              as initialising the graph
+ * =============================================================================
+ */
+
+/* Read an input file describing a graph and construct that graph.
  * Parameters:
  *          filename - the path and name of the file
  * Return:
