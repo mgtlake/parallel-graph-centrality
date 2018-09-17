@@ -1,5 +1,5 @@
 /* =============================================================================
- * ass1.c     Main file, contains entry point and core calculation functions
+ * main.c     Main file, contains entry point and core calculation functions
  * =============================================================================
  */
 #include <stdio.h>
@@ -35,11 +35,10 @@ int** all_pair_shortest_path(Graph* graph) {
         for (int i = 0; i < graph->nodeCount; i++) {
             // Extract loop invariant access
             int distIK = dist[i][k];
-            // Skip lower half and diagonal since matrix is symetrical since 
-            // graph is undirected, and since diagonal = 0 always
-            // Don't skip diagonal any more b/c it's needed for detecting 
-            // negative cycles
-            for (int j = i; j < graph->nodeCount; j++) {
+            // Skipping the lower half was causing problems, and would make 
+            // dividing the workload for parallelisation harder, so I got
+            // rid of it for now. This means approx doubling the runtime.
+            for (int j = 0; j < graph->nodeCount; j++) {
                 // If path through intermediate node exists and is shorter than 
                 // direct path or if direct path doesn't exist, use path 
                 // through intermediate node

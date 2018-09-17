@@ -2,7 +2,7 @@
 CC = gcc
 CFLAGS = -Wall -std=gnu99 -O3 -pg
 DEBUG = -g
-TARGETS = helper.o io.o ass1
+TARGETS = helper.o io.o main
 
 # Mark the default target to run (otherwise make will select the first target in the file)
 .DEFAULT: all clean
@@ -21,8 +21,8 @@ helper.o: helper.c helper.h
 io.o: io.c io.h
 	$(CC) $(CFLAGS) -c io.c -o io.o 
 
-ass1: ass1.c helper.o io.o
-	$(CC) $(CFLAGS) helper.o io.o ass1.c -o ass1
+main: main.c helper.o io.o
+	$(CC) $(CFLAGS) helper.o io.o main.c -o centrality-solver
 
 # Clean up our directory - remove objects and binaries
 clean:

@@ -33,6 +33,12 @@ void print_labels(Graph* graph);
  */
 void print_graph(Graph* graph);
 
+/* Print a graph in DOT format for easy visualisation.
+ * Parameters:
+ *          graph - the graph in question
+ */ 
+void print_graph_DOT(Graph* graph);
+
 /* Print a matrix with tab-seperation. 
  *  N.B. Very large matrices will not fit on screen.
  * Parameters:

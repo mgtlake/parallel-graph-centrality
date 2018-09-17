@@ -5,6 +5,7 @@
  */
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include "helper.h"
 
 /* Print node labels for a graph.
@@ -31,6 +32,24 @@ void print_graph(Graph* graph) {
             }
         } 
     }
+}
+
+/* Print a graph in DOT format for easy visualisation.
+ * Parameters:
+ *          graph - the graph in question
+ */ 
+void print_graph_DOT(Graph* graph) {
+    printf("digraph graphname {\n");
+    for (int i = 0; i < graph->nodeCount; i++) {
+        for (int j = 0; j < graph->nodeCount; j++) {
+            if (graph->connections[i][j] != 0 
+                    && graph->connections[i][j] != INT_MAX) {
+                printf("\t\"%s\" -> \"%s\" [label=%i]\n", graph->nodeLabels[i],
+                        graph->nodeLabels[j], graph->connections[i][j]);
+            }
+        }
+    }
+    printf("}\n");
 }
 
 /* Print a matrix with tab-seperation. 
