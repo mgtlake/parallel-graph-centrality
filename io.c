@@ -65,14 +65,16 @@ Graph* read_file(char* filename) {
  *          graph - the graph in question
  */
 void write_file(char* filename, ListNode* head, Graph* graph) {
-    FILE* file = fopen(filename, "w");
-    fprintf(file, "%i\n", head->length);
+    //FILE* file = fopen(filename, "w");
+    //fprintf(file, "%i\n", head->length);
+    printf("%i\n", head->length);
     ListNode* node = head;
     while (node != NULL) {
-        fprintf(file, "%i %s\n", node->value, graph->nodeLabels[node->value]);
+        //fprintf(file, "%i %s\n", node->value, graph->nodeLabels[node->value]);
+        printf("%i %s\n", node->value, graph->nodeLabels[node->value]);
         node = node->next;
     }
-    fclose(file);
+    //fclose(file);
 }
 
 /* Parse and process a line read from the input file.

@@ -1,6 +1,6 @@
 
-CC = gcc
-CFLAGS = -Wall -std=gnu99 -O3 -pg
+CC = mpicc
+CFLAGS = -Wall -std=gnu99 -O3 -pg -fopenmp
 DEBUG = -g
 TARGETS = helper.o io.o main
 

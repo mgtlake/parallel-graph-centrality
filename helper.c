@@ -41,6 +41,7 @@ void print_graph(Graph* graph) {
 void print_graph_DOT(Graph* graph) {
     printf("digraph graphname {\n");
     for (int i = 0; i < graph->nodeCount; i++) {
+        printf("\t%s\n", graph->nodeLabels[i]);
         for (int j = 0; j < graph->nodeCount; j++) {
             if (graph->connections[i][j] != 0 
                     && graph->connections[i][j] != INT_MAX) {

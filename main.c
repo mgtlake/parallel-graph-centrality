@@ -6,8 +6,13 @@
 #include <string.h>
 #include <stdlib.h>
 #include <limits.h>
+#include <omp.h>
+#include <mpi.h>
 #include "helper.h"
 #include "io.h"
+
+int rank, size;
+MPI_Comm comm = MPI_COMM_WORLD;
 
 /* Populate matrix of shortest paths between all pairs of nodes.
  *  Use Floyd-Warshall algorithm for O(|V|^3) time with simple implementation.
@@ -18,6 +23,11 @@
  *          between all nodes.
  */
 int** all_pair_shortest_path(Graph* graph) {
+    // Partition by rows since C is row-major.
+    int partitionSize = graph->nodeCount / size;
+    int myStart = rank * partitionSize;
+    int myEnd = (rank + 1) * partitionSize;
+
     // Use full matrix instead of half for simpler access
     // RAM use isn't the bottleneck in any case
     int** dist = malloc(graph->nodeCount * sizeof(int*));
@@ -29,10 +39,17 @@ int** all_pair_shortest_path(Graph* graph) {
     }
 
     // Loop over each intermediate node
-    // runtime: |V| * (|V| * |V| + |V|)/2
     for (int k = 0; k < graph->nodeCount; k++) {
-        // Loop over each pair of nodes
+        // Synchronize k-th row and column, since we'll be querying it.
+        MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, k / partitionSize, comm);
         for (int i = 0; i < graph->nodeCount; i++) {
+            MPI_Bcast(&dist[i][k], 1, MPI_INT, i / partitionSize, 
+                    comm); 
+        }
+
+        // Loop over each pair of nodes
+        #pragma omp parallel for
+        for (int i = myStart; i < myEnd; i++) {
             // Extract loop invariant access
             int distIK = dist[i][k];
             // Skipping the lower half was causing problems, and would make 
@@ -55,16 +72,17 @@ int** all_pair_shortest_path(Graph* graph) {
         }
     }
 
-    // Copy top half into lower half - this is valid because an undirected graph
-    // will always have a symetrical distance matrix (path(u, v) == path(v, u))
-    // runtime: (|V| * |V| - |V|)/2
-    for (int i = 0; i < graph->nodeCount; i++) {
-        for (int j = 0; j < i; j++) {
-           dist[i][j] = dist[j][i]; 
+    // Collect, on rank 0 only.
+    if (rank == 0 && size > 1) {
+        for (int i = myEnd; i < graph->nodeCount; i++) {
+            MPI_Recv(dist[i], graph->nodeCount, MPI_INT, MPI_ANY_SOURCE, i, 
+                    comm, NULL);
+        }
+    } else {
+        for (int i = myStart; i < myEnd; i++) {
+            MPI_Send(dist[i], graph->nodeCount, MPI_INT, 0, i, comm);
         }
     }
-
-    // total runtime: (|V|^3)/2 + |V|^2 - |V|/2 => O(|V|^3)
 
     return dist;
 }
@@ -86,6 +104,10 @@ ListNode* min_total_centres(int** dist, Graph* graph) {
         int sum = 0;
         // Sum over row of pairwise distance matrix to get total distance
         for (int j = 0; j < graph->nodeCount; j++) {
+            if (dist[i][j] == INT_MAX) {
+                printf("Disconnected subgraph detected, solution undefined\n");
+                exit(1); 
+            }
             sum += dist[i][j];
         } 
         if (sum < champ) {
@@ -147,9 +169,25 @@ ListNode* min_max_centres(int** dist, Graph* graph) {
 }
 
 int main(int argc, char** argv) {
+    //printf("Hello world\n");
+    //# pragma omp parallel
+    //{
+    //      printf("Thread rank: %d\n", omp_get_thread_num());
+    //}
+    //fflush(stdout);
+
+    MPI_Init(NULL, NULL);
+    MPI_Comm_size(comm, &size);
+    MPI_Comm_rank(comm, &rank);
+
     Graph* graph = read_file(argv[1]);
 
     int** shortestPathsMatrix = all_pair_shortest_path(graph);
+
+    if (rank != 0) {
+        MPI_Finalize();
+        return 0;
+    }
     
     // Find centres by minimum total distance
     ListNode* minTotalCentres = min_total_centres(shortestPathsMatrix, graph);
@@ -163,6 +201,7 @@ int main(int argc, char** argv) {
     sprintf(minMaxFilename, "%s-min_max", argv[1]);
     write_file(minMaxFilename, minMaxCentres, graph);
 
+    MPI_Finalize();
     return 0;
 }
 
