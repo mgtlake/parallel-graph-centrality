@@ -38,6 +38,8 @@ int** all_pair_shortest_path(Graph* graph) {
         }
     }
 
+    printf("inner, chunk=no\n");
+
     // Loop over each intermediate node
     for (int k = 0; k < graph->nodeCount; k++) {
         // Synchronize k-th row and column, since we'll be querying it.
@@ -46,6 +48,7 @@ int** all_pair_shortest_path(Graph* graph) {
             MPI_Bcast(&dist[i][k], 1, MPI_INT, i / partitionSize, 
                     comm); 
         }
+        if (k%100 == 0) printf("%i / %i\n", k, graph->nodeCount);
 
         // Loop over each pair of nodes
         #pragma omp parallel for
