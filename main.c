@@ -39,6 +39,7 @@ int** all_pair_shortest_path(Graph* graph) {
     }
 
     printf("inner, chunk=no\n");
+    //printf("none\n");
 
     // Loop over each intermediate node
     for (int k = 0; k < graph->nodeCount; k++) {
@@ -51,13 +52,13 @@ int** all_pair_shortest_path(Graph* graph) {
         if (k%100 == 0) printf("%i / %i\n", k, graph->nodeCount);
 
         // Loop over each pair of nodes
-        #pragma omp parallel for
         for (int i = myStart; i < myEnd; i++) {
             // Extract loop invariant access
             int distIK = dist[i][k];
             // Skipping the lower half was causing problems, and would make 
             // dividing the workload for parallelisation harder, so I got
             // rid of it for now. This means approx doubling the runtime.
+            #pragma omp parallel for
             for (int j = 0; j < graph->nodeCount; j++) {
                 // If path through intermediate node exists and is shorter than 
                 // direct path or if direct path doesn't exist, use path 
@@ -75,7 +76,7 @@ int** all_pair_shortest_path(Graph* graph) {
         }
     }
 
-    // Collect, on rank 0 only.
+    // Collect on rank 0 only since we only need to process once.
     if (rank == 0 && size > 1) {
         for (int i = myEnd; i < graph->nodeCount; i++) {
             MPI_Recv(dist[i], graph->nodeCount, MPI_INT, MPI_ANY_SOURCE, i, 
@@ -172,21 +173,19 @@ ListNode* min_max_centres(int** dist, Graph* graph) {
 }
 
 int main(int argc, char** argv) {
-    //printf("Hello world\n");
-    //# pragma omp parallel
-    //{
-    //      printf("Thread rank: %d\n", omp_get_thread_num());
-    //}
-    //fflush(stdout);
-
     MPI_Init(NULL, NULL);
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
-
+    
     Graph* graph = read_file(argv[1]);
+
+    double startTime = MPI_Wtime();
 
     int** shortestPathsMatrix = all_pair_shortest_path(graph);
 
+    printf("rank %i : %fs\n", rank, MPI_Wtime() - startTime);
+
+    // Only calculate centres on rank 0, since only it has full distance matrix
     if (rank != 0) {
         MPI_Finalize();
         return 0;
