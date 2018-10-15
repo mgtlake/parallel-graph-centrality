@@ -113,3 +113,29 @@ int max_val(int* arr, int size) {
     return champ;
 }
 
+
+void set_partition(int rank, int size, int dataSize, int* start, int* end) {
+    int count = dataSize / size;
+    int remainder = dataSize % size;
+
+    if (rank < remainder) {
+        // The first 'remainder' ranks get 'count + 1' tasks each
+        *start = rank * (count + 1);
+        *end = *start + count;
+    } else {
+        // The remaining 'size - remainder' ranks get 'count' task each
+        *start = rank * count + remainder;
+        *end = *start + (count - 1);
+    }
+}
+
+int get_partition(int i, int size, int dataSize) {
+    int start, end;
+    for (int j = 0; j < size; j++) {
+        set_partition(j, size, dataSize, &start, &end);
+        if (0 <= i && i <= end) {
+            return j;
+        }
+    }
+}
+

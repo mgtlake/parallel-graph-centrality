@@ -27,6 +27,12 @@ int** all_pair_shortest_path(Graph* graph) {
     int partitionSize = graph->nodeCount / size;
     int myStart = rank * partitionSize;
     int myEnd = (rank + 1) * partitionSize;
+    int start, end;
+    set_partition(rank, size, graph->nodeCount, &start, &end);
+    printf("%i : %i - %i\n", rank, start, end);
+    for (int i = 0; i < graph->nodeCount; i++) {
+        printf("%i -> %i\n", i, get_partition(i, size, graph->nodeCount));
+    }
 
     // Use full matrix instead of half for simpler access
     // RAM use isn't the bottleneck in any case
@@ -38,7 +44,7 @@ int** all_pair_shortest_path(Graph* graph) {
         }
     }
 
-    printf("inner, chunk=no\n");
+    //printf("inner, chunk=no\n");
     //printf("none\n");
 
     // Loop over each intermediate node
@@ -46,10 +52,11 @@ int** all_pair_shortest_path(Graph* graph) {
         // Synchronize k-th row and column, since we'll be querying it.
         MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, k / partitionSize, comm);
         for (int i = 0; i < graph->nodeCount; i++) {
+            if (i/partitionSize < 0 || i/partitionSize>=size)printf("%i\n", i / partitionSize);
             MPI_Bcast(&dist[i][k], 1, MPI_INT, i / partitionSize, 
                     comm); 
         }
-        if (k%100 == 0) printf("%i / %i\n", k, graph->nodeCount);
+        //if (k%100 == 0) printf("%i / %i\n", k, graph->nodeCount);
 
         // Loop over each pair of nodes
         for (int i = myStart; i < myEnd; i++) {
@@ -77,7 +84,10 @@ int** all_pair_shortest_path(Graph* graph) {
     }
 
     // Collect on rank 0 only since we only need to process once.
-    if (rank == 0 && size > 1) {
+    if (size == 1) {
+        return dist;
+    }
+    if (rank == 0) {
         for (int i = myEnd; i < graph->nodeCount; i++) {
             MPI_Recv(dist[i], graph->nodeCount, MPI_INT, MPI_ANY_SOURCE, i, 
                     comm, NULL);
@@ -173,10 +183,10 @@ ListNode* min_max_centres(int** dist, Graph* graph) {
 }
 
 int main(int argc, char** argv) {
-    MPI_Init(NULL, NULL);
+    MPI_Init(&argc, &argv);
     MPI_Comm_size(comm, &size);
     MPI_Comm_rank(comm, &rank);
-    
+
     Graph* graph = read_file(argv[1]);
 
     double startTime = MPI_Wtime();

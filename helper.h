@@ -69,3 +69,9 @@ void free_list(ListNode* head);
  *          The largest value.
  */
 int max_val(int* arr, int size);
+
+
+
+void set_partition(int rank, int size, int dataSize, int* start, int* end);
+
+int get_partition(int i, int size, int dataSize);

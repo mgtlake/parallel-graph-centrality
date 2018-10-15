@@ -33,6 +33,7 @@ Graph* read_file(char* filename) {
 
     while ((c = fgetc(file)) != EOF) {
         if (c == '\n') {
+            lineBuffer[bufferPos] = '\0';
             line++;
 
             process_line(lineBuffer, line, bufferPos, graph);
