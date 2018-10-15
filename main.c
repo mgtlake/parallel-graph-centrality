@@ -24,9 +24,6 @@ MPI_Comm comm = MPI_COMM_WORLD;
  */
 int** all_pair_shortest_path(Graph* graph) {
     // Partition by rows since C is row-major.
-    int partitionSize = graph->nodeCount / size;
-    int myStart = rank * partitionSize;
-    int myEnd = (rank + 1) * partitionSize;
     int start, end;
     set_partition(rank, size, graph->nodeCount, &start, &end);
     printf("%i : %i - %i\n", rank, start, end);
@@ -50,16 +47,17 @@ int** all_pair_shortest_path(Graph* graph) {
     // Loop over each intermediate node
     for (int k = 0; k < graph->nodeCount; k++) {
         // Synchronize k-th row and column, since we'll be querying it.
-        MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, k / partitionSize, comm);
+        MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, 
+                get_partition(k, size, graph->nodeCount), comm);
         for (int i = 0; i < graph->nodeCount; i++) {
-            if (i/partitionSize < 0 || i/partitionSize>=size)printf("%i\n", i / partitionSize);
-            MPI_Bcast(&dist[i][k], 1, MPI_INT, i / partitionSize, 
-                    comm); 
+            int root = get_partition(i, size, graph->nodeCount);
+            if (root < 0 || root>=size)printf("%i\n", root);
+            MPI_Bcast(&dist[i][k], 1, MPI_INT, root, comm); 
         }
         //if (k%100 == 0) printf("%i / %i\n", k, graph->nodeCount);
 
         // Loop over each pair of nodes
-        for (int i = myStart; i < myEnd; i++) {
+        for (int i = start; i <= end; i++) {
             // Extract loop invariant access
             int distIK = dist[i][k];
             // Skipping the lower half was causing problems, and would make 
@@ -88,12 +86,12 @@ int** all_pair_shortest_path(Graph* graph) {
         return dist;
     }
     if (rank == 0) {
-        for (int i = myEnd; i < graph->nodeCount; i++) {
+        for (int i = end+1; i < graph->nodeCount; i++) {
             MPI_Recv(dist[i], graph->nodeCount, MPI_INT, MPI_ANY_SOURCE, i, 
                     comm, NULL);
         }
     } else {
-        for (int i = myStart; i < myEnd; i++) {
+        for (int i = start; i <= end; i++) {
             MPI_Send(dist[i], graph->nodeCount, MPI_INT, 0, i, comm);
         }
     }
