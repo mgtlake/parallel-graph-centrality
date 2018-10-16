@@ -26,10 +26,6 @@ int** all_pair_shortest_path(Graph* graph) {
     // Partition by rows since C is row-major.
     int start, end;
     set_partition(rank, size, graph->nodeCount, &start, &end);
-    printf("%i : %i - %i\n", rank, start, end);
-    for (int i = 0; i < graph->nodeCount; i++) {
-        printf("%i -> %i\n", i, get_partition(i, size, graph->nodeCount));
-    }
 
     // Use full matrix instead of half for simpler access
     // RAM use isn't the bottleneck in any case
@@ -44,17 +40,33 @@ int** all_pair_shortest_path(Graph* graph) {
     //printf("inner, chunk=no\n");
     //printf("none\n");
 
+    double startTime = MPI_Wtime();
+    double com = 0;
     // Loop over each intermediate node
     for (int k = 0; k < graph->nodeCount; k++) {
         // Synchronize k-th row and column, since we'll be querying it.
+        double _startTime = MPI_Wtime();
         MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, 
                 get_partition(k, size, graph->nodeCount), comm);
-        for (int i = 0; i < graph->nodeCount; i++) {
-            int root = get_partition(i, size, graph->nodeCount);
-            if (root < 0 || root>=size)printf("%i\n", root);
-            MPI_Bcast(&dist[i][k], 1, MPI_INT, root, comm); 
+        for (int i = 0; i < size; i++) {
+            int otherStart, otherEnd;
+            set_partition(i, size, graph->nodeCount, &otherStart, &otherEnd);
+            // off by one?
+            int* kCol = malloc((otherEnd - otherStart + 1) * sizeof(int));
+            for (int j = otherStart, c=0; j <= otherEnd; j++, c++) {
+                kCol[c] = dist[j][k];
+            }
+            MPI_Bcast(kCol, otherEnd - otherStart + 1, MPI_INT, i, comm);
+            for (int j = otherStart, c=0; j <= otherEnd; j++, c++) {
+                dist[j][k] = kCol[c];
+            }
+            free(kCol);
         }
-        //if (k%100 == 0) printf("%i / %i\n", k, graph->nodeCount);
+        com += MPI_Wtime() - _startTime;
+        if (k%500 == 0) {
+            //printf("rank %i, %i / %i - %f\n", rank, k, graph->nodeCount, MPI_Wtime() - startTime);
+            //printf("%i / %i\n", k, graph->nodeCount);
+        }
 
         // Loop over each pair of nodes
         for (int i = start; i <= end; i++) {
@@ -80,7 +92,10 @@ int** all_pair_shortest_path(Graph* graph) {
             }
         }
     }
+    //printf("com rank %i : %f\n", rank, com);
+    //printf("run rank %i : %f\n", rank, MPI_Wtime() - startTime - com);
 
+    startTime = MPI_Wtime();
     // Collect on rank 0 only since we only need to process once.
     if (size == 1) {
         return dist;
@@ -90,11 +105,13 @@ int** all_pair_shortest_path(Graph* graph) {
             MPI_Recv(dist[i], graph->nodeCount, MPI_INT, MPI_ANY_SOURCE, i, 
                     comm, NULL);
         }
+       printf("%f,", com);
     } else {
         for (int i = start; i <= end; i++) {
             MPI_Send(dist[i], graph->nodeCount, MPI_INT, 0, i, comm);
         }
     }
+    //printf("compile rank %i : %f\n", rank, MPI_Wtime() - startTime);
 
     return dist;
 }
@@ -191,7 +208,9 @@ int main(int argc, char** argv) {
 
     int** shortestPathsMatrix = all_pair_shortest_path(graph);
 
-    printf("rank %i : %fs\n", rank, MPI_Wtime() - startTime);
+    if (rank == 0) {
+        printf("%i\n", (int) (MPI_Wtime() - startTime));
+    }
 
     // Only calculate centres on rank 0, since only it has full distance matrix
     if (rank != 0) {
