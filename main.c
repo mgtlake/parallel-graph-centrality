@@ -44,23 +44,26 @@ int** all_pair_shortest_path(Graph* graph) {
     double com = 0;
     // Loop over each intermediate node
     for (int k = 0; k < graph->nodeCount; k++) {
-        // Synchronize k-th row and column, since we'll be querying it.
         double _startTime = MPI_Wtime();
-        MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, 
-                get_partition(k, size, graph->nodeCount), comm);
-        for (int i = 0; i < size; i++) {
-            int otherStart, otherEnd;
-            set_partition(i, size, graph->nodeCount, &otherStart, &otherEnd);
-            // off by one?
-            int* kCol = malloc((otherEnd - otherStart + 1) * sizeof(int));
-            for (int j = otherStart, c=0; j <= otherEnd; j++, c++) {
-                kCol[c] = dist[j][k];
+        if (size > 1) {
+            // Synchronize k-th row and column, since we'll be querying it.
+            MPI_Bcast(dist[k], graph->nodeCount, MPI_INT, 
+                    get_partition(k, size, graph->nodeCount), comm);
+            for (int i = 0; i < size; i++) {
+                int otherStart, otherEnd;
+                set_partition(i, size, graph->nodeCount, &otherStart, &otherEnd);
+                // Create single buffer containing i-th node's piece of the 
+                // column, for single broadcast as opposed to many 
+                int* kCol = malloc((otherEnd - otherStart + 1) * sizeof(int));
+                for (int j = otherStart, c=0; j <= otherEnd; j++, c++) {
+                    kCol[c] = dist[j][k];
+                }
+                MPI_Bcast(kCol, otherEnd - otherStart + 1, MPI_INT, i, comm);
+                for (int j = otherStart, c=0; j <= otherEnd; j++, c++) {
+                    dist[j][k] = kCol[c];
+                }
+                free(kCol);
             }
-            MPI_Bcast(kCol, otherEnd - otherStart + 1, MPI_INT, i, comm);
-            for (int j = otherStart, c=0; j <= otherEnd; j++, c++) {
-                dist[j][k] = kCol[c];
-            }
-            free(kCol);
         }
         com += MPI_Wtime() - _startTime;
         if (k%500 == 0) {
@@ -98,6 +101,7 @@ int** all_pair_shortest_path(Graph* graph) {
     startTime = MPI_Wtime();
     // Collect on rank 0 only since we only need to process once.
     if (size == 1) {
+        printf("%f,", com);
         return dist;
     }
     if (rank == 0) {
@@ -105,7 +109,7 @@ int** all_pair_shortest_path(Graph* graph) {
             MPI_Recv(dist[i], graph->nodeCount, MPI_INT, MPI_ANY_SOURCE, i, 
                     comm, NULL);
         }
-       printf("%f,", com);
+        printf("%f,", com);
     } else {
         for (int i = start; i <= end; i++) {
             MPI_Send(dist[i], graph->nodeCount, MPI_INT, 0, i, comm);
