@@ -70,8 +70,25 @@ void free_list(ListNode* head);
  */
 int max_val(int* arr, int size);
 
-
+/* Partition the data for a given rank.
+ * Balances remainders so that the largest partitions are only one element 
+ * larger than the smallest.
+ * Parameters:
+ *          rank - the current rank (0 to size-1)
+ *          size - the total number of ranks
+ *          dataSize - the number of rows in the data
+ *          start - out parameter holding the start of the partition, inclusive
+ *          end - out parameter holding the end of the partition, inclusive
+ */
 
 void set_partition(int rank, int size, int dataSize, int* start, int* end);
 
+/* Get the rank owning the partition containing a given row.
+ * Parameters:
+ *          i - the index of the row being looked-up
+ *          size - the total number of ranks
+ *          dataSize - the number of rows in the data
+ * Return:
+ *          The rank owning the partition containing the row.
+ */
 int get_partition(int i, int size, int dataSize);

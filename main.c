@@ -37,9 +37,6 @@ int** all_pair_shortest_path(Graph* graph) {
         }
     }
 
-    //printf("inner, chunk=no\n");
-    //printf("none\n");
-
     double startTime = MPI_Wtime();
     double com = 0;
     // Loop over each intermediate node
@@ -66,10 +63,6 @@ int** all_pair_shortest_path(Graph* graph) {
             }
         }
         com += MPI_Wtime() - _startTime;
-        if (k%500 == 0) {
-            //printf("rank %i, %i / %i - %f\n", rank, k, graph->nodeCount, MPI_Wtime() - startTime);
-            //printf("%i / %i\n", k, graph->nodeCount);
-        }
 
         // Loop over each pair of nodes
         for (int i = start; i <= end; i++) {
@@ -95,8 +88,6 @@ int** all_pair_shortest_path(Graph* graph) {
             }
         }
     }
-    //printf("com rank %i : %f\n", rank, com);
-    //printf("run rank %i : %f\n", rank, MPI_Wtime() - startTime - com);
 
     startTime = MPI_Wtime();
     // Collect on rank 0 only since we only need to process once.
@@ -115,7 +106,6 @@ int** all_pair_shortest_path(Graph* graph) {
             MPI_Send(dist[i], graph->nodeCount, MPI_INT, 0, i, comm);
         }
     }
-    //printf("compile rank %i : %f\n", rank, MPI_Wtime() - startTime);
 
     return dist;
 }
